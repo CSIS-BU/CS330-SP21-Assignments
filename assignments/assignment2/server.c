@@ -1,9 +1,9 @@
 /*****************************************************************************
- * server-c-sol2.c
- * Name:
+ * server.c
+ * Name: Tachun Lin
  *****************************************************************************/
 
-#include <arpa/inet.h> // for inet_ntop()
+#include <arpa/inet.h>
 #include <err.h>
 #include <errno.h>
 #include <netdb.h>
@@ -16,7 +16,27 @@
 #include <unistd.h>
 
 #define QUEUE_LENGTH 10
-#define RECV_BUFFER_SIZE 2048
+#define RECV_BUFFER_SIZE 1024 
+
+/*
+ * Note: Why do I use the following structure?
+ *       The IP address would use up to "xxx.xxx.xxx.xxx"
+ *       characters, in total 15 characters. And we keep
+ *       1 ending null character for the string.
+ *       Similarly, the port number can go up to 65535,
+ *       thus 5+1 characters.
+ * See: http://www.cs.ecu.edu/karl/2530/spr17/Notes/C/String/nullterm.html
+ */
+
+typedef struct
+{
+  char client_ip[16];
+  char client_port[6];
+  char server_ip[16];
+  char server_port[6];
+  char message[RECV_BUFFER_SIZE-44];
+} data;
+
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa) {
@@ -27,21 +47,20 @@ void *get_in_addr(struct sockaddr *sa) {
 }
 
 /* TODO: server()
- * Open socket and wait for client to connect
+ * Open socket and wait for the router to connect
  * Print received message to stdout
  * Return 0 on success, non-zero on failure
  */
 int server(char *server_port) {
   // declare variables
   int sockfd, new_sockfd; // listen on sock_fd, new connection on new_fd
-  struct addrinfo hints, *servinfo, *p;
+  struct addrinfo hints, *servinfo;
   struct sockaddr_in client_addr; // client's address information
   socklen_t length;
   int error;
-  int size;
+  size_t size;
   int yes = 1;                  // used in setsockopt()
-  char ipAddr[INET_ADDRSTRLEN]; // number of byte for IPv4 address
-  unsigned char buffer[RECV_BUFFER_SIZE], serialize_buf[RECV_BUFFER_SIZE];
+  char buffer[RECV_BUFFER_SIZE];
 
   // build address data structure with getaddrinfo()
   memset(&hints, 0, sizeof hints);
@@ -106,7 +125,7 @@ int server(char *server_port) {
     }
 
     /*
-     * prepare the server for incoming message from the client
+     * prepare the server for incoming message from the router
      * Note: this is a blocking function meaning that it will wait
      * for I/O to occur
      * Note: Here, we use the new_sockfd descriptor, NOT s!!!
@@ -114,9 +133,16 @@ int server(char *server_port) {
 
     while((size= recv(new_sockfd, buffer, RECV_BUFFER_SIZE, 0)) > 0) {
       //fwrite(buffer, 1, size, stdout);
-      write(1, buffer, size);
+      //write(1, buffer, size);
+      data *mesg = (data*) buffer;
+      printf("[server] server ip=%s\n", mesg->server_ip);
+      printf("[server] server port=%s\n", mesg->server_port);
+      printf("[server] client ip=%s\n", mesg->client_ip);
+      printf("[server] client port=%s\n", mesg->client_port);
+      printf("[server] message received=%s", mesg->message);
     }
     fflush(stdout);
+    printf("===== end of message =====\n");
     
     /*
      * Done, close the new _ s descriptor, i.e., release the connection.

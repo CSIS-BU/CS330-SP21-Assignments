@@ -36,7 +36,7 @@ int client(char *server_ip, char *server_port) {
 
   // build address data structure with getaddrinfo()
   memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_UNSPEC;
+  hints.ai_family = AF_INET; //AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
   error = getaddrinfo(server_ip, server_port, &hints, &servinfo);
